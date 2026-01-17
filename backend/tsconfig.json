@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "paths": {
+      "@/ai-sdk-provider": ["../../../ai-sdk-provider.ts"],
+      "@/env": ["../backend-env.ts"],
+      "@/db": ["../../../db.ts"],
+      "@/shared/*": ["../shared/*"]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../../../ai-sdk-provider.ts",
+    "../../../db.ts",
+    "../../../backend-types.d.ts", "../backend-env.ts",
+  ]
+}

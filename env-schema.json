@@ -1,0 +1,6 @@
+{
+  "backend": {
+    "BETTER_AUTH_SECRET": { "optional": true }
+  },
+  "frontend": {}
+}
