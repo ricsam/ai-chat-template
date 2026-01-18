@@ -2,6 +2,19 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { api } from "../api";
 import { useSession, signOut } from "../auth-client";
 import { useEffect, useState, type ReactNode } from "react";
+import { Button } from "./ui/button";
+import { Select, SelectOption } from "./ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "./ui/alert-dialog";
+import { Shimmer } from "./ai-elements/shimmer";
 
 interface ChatLayoutProps {
   children: ReactNode;
@@ -12,6 +25,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
   const { data: session, isPending } = useSession();
   const navigate = useNavigate();
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-5-20250929");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -56,15 +70,15 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
     }
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    await deleteConversation.mutateAsync({ params: { id } });
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    await deleteConversation.mutateAsync({ params: { id: deleteId } });
     refetch();
     // If we deleted the current chat, go to chat index
-    if (currentChatId === id) {
+    if (currentChatId === deleteId) {
       navigate({ to: "/chat" });
     }
+    setDeleteId(null);
   };
 
   const handleSignOut = async () => {
@@ -74,22 +88,40 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
 
   if (isPending || !session) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="h-screen flex bg-background">
+        {/* Sidebar Skeleton */}
+        <div className="w-64 bg-card flex flex-col border-r border-border p-4 space-y-4">
+          <Shimmer className="h-10 w-full rounded" />
+          <Shimmer className="h-10 w-full rounded" />
+          <div className="flex-1 space-y-2 mt-4">
+            <Shimmer className="h-8 w-full rounded" />
+            <Shimmer className="h-8 w-full rounded" />
+            <Shimmer className="h-8 w-3/4 rounded" />
+          </div>
+          <Shimmer className="h-8 w-full rounded mt-auto" />
+        </div>
+        {/* Main Content Skeleton */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="space-y-4 w-full max-w-md px-6">
+            <Shimmer className="h-6 w-48" />
+            <Shimmer className="h-4 w-full" />
+            <Shimmer className="h-4 w-3/4" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-gray-900">
+    <div className="h-screen flex bg-background">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-800 flex flex-col border-r border-gray-700">
+      <div className="w-64 bg-card flex flex-col border-r border-border">
         {/* Header */}
-        <div className="p-4 border-b border-gray-700">
-          <button
+        <div className="p-4 border-b border-border">
+          <Button
             onClick={handleNewChat}
             disabled={createConversation.isPending}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-wait text-white rounded-lg transition-colors"
+            className="w-full"
           >
             <svg
               className="w-5 h-5"
@@ -105,58 +137,62 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
               />
             </svg>
             New Chat
-          </button>
+          </Button>
         </div>
 
         {/* Model Selector */}
-        <div className="p-4 border-b border-gray-700">
-          <label className="text-xs text-gray-400 mb-1 block">Model</label>
-          <select
+        <div className="p-4 border-b border-border">
+          <label className="text-xs text-muted-foreground mb-1 block">Model</label>
+          <Select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
           >
             {models.map((model) => (
-              <option key={model.modelId} value={model.modelId}>
+              <SelectOption key={model.modelId} value={model.modelId}>
                 {model.displayName}
-              </option>
+              </SelectOption>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto p-2">
           {conversations.length === 0 && (
-            <div className="text-gray-500 text-sm text-center py-4">
+            <div className="text-muted-foreground text-sm text-center py-4">
               No conversations yet
             </div>
           )}
           {conversations.map((convo) => (
-            <Link
-              key={convo.id}
-              to="/chat/$id"
-              params={{ id: convo.id }}
-              className={`flex items-center gap-2 px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-lg group mb-1 ${
-                currentChatId === convo.id ? "bg-gray-700" : ""
-              }`}
-            >
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div key={convo.id} className="relative group mb-1">
+              <Link
+                to="/chat/$id"
+                params={{ id: convo.id }}
+                className={`flex items-center gap-2 px-3 py-2 text-foreground hover:bg-accent rounded-lg ${
+                  currentChatId === convo.id ? "bg-accent" : ""
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <span className="flex-1 truncate text-sm">{convo.title}</span>
+                <svg
+                  className="w-4 h-4 flex-shrink-0 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <span className="flex-1 truncate text-sm">{convo.title}</span>
+              </Link>
               <button
-                onClick={(e) => handleDelete(convo.id, e)}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 p-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDeleteId(convo.id);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 rounded transition-opacity"
               >
                 <svg
                   className="w-4 h-4"
@@ -172,16 +208,39 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
                   />
                 </svg>
               </button>
-            </Link>
+              <AlertDialog
+                open={deleteId === convo.id}
+                onOpenChange={(open) => !open && setDeleteId(null)}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete "{convo.title}" and all its messages. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={handleDeleteConfirm}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           ))}
         </div>
 
         {/* User Footer */}
-        <div className="p-4 border-t border-gray-700 flex items-center justify-between">
-          <span className="text-gray-400 text-sm truncate">{session.user.name}</span>
-          <button
+        <div className="p-4 border-t border-border flex items-center justify-between">
+          <span className="text-muted-foreground text-sm truncate">{session.user.name}</span>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleSignOut}
-            className="text-gray-400 hover:text-white p-1"
             title="Sign out"
           >
             <svg
@@ -197,7 +256,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
 

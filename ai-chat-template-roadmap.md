@@ -86,19 +86,22 @@ EOF
 ### Phase 4: Polish
 
 **Implementation:**
-- [ ] Add model selector dropdown in sidebar
-- [ ] Add conversation deletion with confirmation
-- [ ] Auto-generate titles from first user message
-- [ ] Add keyboard shortcuts (Enter to send)
-- [ ] Add loading states and error handling
+- [x] Add model selector dropdown in sidebar
+- [x] Add conversation deletion with confirmation (AlertDialog component)
+- [x] Auto-generate titles from first user message
+- [x] Add keyboard shortcuts (Enter to send)
+- [x] Add loading states and error handling
+- [x] Convert to shadcn/ui theme with CSS variables (Geist font, semantic colors)
+- [x] Create shadcn/ui components (Button, Input, Card, Select, Dialog, AlertDialog)
 
 **Verification:**
-- [ ] Run typecheck: `bun run typecheck:template ai-chatbot`
-- [ ] Run lint: `bun run lint:template ai-chatbot`
-- [ ] Test locally with serve script
-- [ ] Test: Model selector changes model for new chats
-- [ ] Test: Conversation title updates from first message
-- [ ] Test: Enter key sends message
+- [x] Run typecheck: `bun run typecheck:template ai-chatbot`
+- [x] Run lint: `bun run lint:template ai-chatbot`
+- [x] Test locally with serve script
+- [x] Test: Model selector changes model for new chats
+- [x] Test: Conversation title updates from first message
+- [x] Test: Enter key sends message
+- [x] Test: Delete confirmation dialog appears when clicking delete
 
 ---
 

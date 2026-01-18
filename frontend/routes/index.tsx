@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { signInWithUsername, useSession } from "../auth-client";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import env from "@/env";
 
 export const Route = createFileRoute("/")({
@@ -43,43 +46,41 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">AI Chat</h1>
-          <p className="text-gray-400">Enter your username to get started</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl">AI Chat</CardTitle>
+          <CardDescription>Enter your username to get started</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <Input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
-              className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
               disabled={isLoading}
               autoFocus
+              className="h-12"
             />
-          </div>
-
-          {error && (
-            <div className="text-red-400 text-sm text-center">{error}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || !username.trim()}
-            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-          >
-            {isLoading ? "Signing in..." : "Continue"}
-          </button>
+            {error && (
+              <div className="text-destructive text-sm text-center">{error}</div>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button
+              type="submit"
+              disabled={isLoading || !username.trim()}
+              className="w-full h-12"
+            >
+              {isLoading ? "Signing in..." : "Continue"}
+            </Button>
+            <p className="text-muted-foreground text-sm text-center">
+              New username? We'll create an account for you.
+            </p>
+          </CardFooter>
         </form>
-
-        <p className="text-gray-500 text-sm text-center mt-6">
-          New username? We'll create an account for you.
-        </p>
-      </div>
+      </Card>
     </div>
   );
 }

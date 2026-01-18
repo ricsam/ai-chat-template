@@ -37,6 +37,8 @@ EOF
 
 This is a virtual file system so there is no package json nor node_modules directory but the javascript and browser environment will just work.
 
+The icon library for this project is @tabler/icons-react
+
 ---
 
 ## Design Guidelines
