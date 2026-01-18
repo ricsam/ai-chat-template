@@ -22,7 +22,27 @@ export const router = createRouter<typeof contract, RouterContext>(
     // Get available AI models
     getModels: async () => {
       const models = await getModels();
-      return { status: Status.OK, body: models };
+      // Map models to include provider (inferred from model ID)
+      const mappedModels = models.map((model) => {
+        // Infer provider from model ID
+        let provider = "anthropic";
+        if (model.modelId.startsWith("gpt-") || model.modelId.startsWith("o1-") || model.modelId.startsWith("o3-")) {
+          provider = "openai";
+        } else if (model.modelId.startsWith("gemini-")) {
+          provider = "google";
+        } else if (model.modelId.startsWith("deepseek-")) {
+          provider = "deepseek";
+        }
+
+        return {
+          modelId: model.modelId,
+          displayName: model.displayName,
+          thinking: model.thinking,
+          provider,
+          maxTokens: model.contextWindow,
+        };
+      });
+      return { status: Status.OK, body: mappedModels };
     },
 
     // List conversations for authenticated user

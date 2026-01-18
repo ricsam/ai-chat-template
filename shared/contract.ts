@@ -19,6 +19,9 @@ export const contract = defineContract({
       [Status.OK]: z.array(z.object({
         modelId: z.string(),
         displayName: z.string(),
+        thinking: z.boolean(),
+        provider: z.string(),
+        maxTokens: z.number().optional(),
       })),
     },
   },

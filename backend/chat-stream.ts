@@ -19,10 +19,12 @@ export async function handleChatStream(request: Request): Promise<Response> {
   }
 
   try {
-    // Parse request body
-    const { message, id: chatId } = (await request.json()) as {
+    // Parse request body - includes per-message model selection and thinking mode
+    const { message, id: chatId, modelId, thinkingEnabled } = (await request.json()) as {
       message: UIMessage;
       id: string;
+      modelId?: string;
+      thinkingEnabled?: boolean;
     };
 
     // Load conversation
@@ -31,6 +33,9 @@ export async function handleChatStream(request: Request): Promise<Response> {
       return new Response("Conversation not found", { status: 404 });
     }
 
+    // Use per-message model if provided, otherwise fall back to conversation default
+    const selectedModel = modelId || convo.modelId;
+
     // Load previous messages
     const previousMessages = (await loadChat(chatId)) as UIMessage[];
     const messages = [...previousMessages, message];
@@ -38,10 +43,17 @@ export async function handleChatStream(request: Request): Promise<Response> {
     // Convert messages
     const modelMessages = await convertToModelMessages(messages);
 
-    // Stream AI response
+    // Stream AI response with optional thinking mode
     const result = streamText({
-      model: buildItNow(convo.modelId),
+      model: buildItNow(selectedModel),
       messages: modelMessages,
+      ...(thinkingEnabled && {
+        providerOptions: {
+          anthropic: {
+            thinking: { type: "enabled", budgetTokens: 10000 },
+          },
+        },
+      }),
     });
 
     // Return UIMessageStream format for useChat hook
@@ -52,12 +64,15 @@ export async function handleChatStream(request: Request): Promise<Response> {
         prefix: "msg",
         size: 16,
       }),
+      // Send reasoning tokens to client when thinking is enabled
+      sendReasoning: thinkingEnabled,
       // Attach metadata at different stream stages
       messageMetadata: ({ part }) => {
         if (part.type === "start") {
           return {
             createdAt: Date.now(),
-            model: convo.modelId,
+            model: selectedModel,
+            thinkingEnabled: thinkingEnabled ?? false,
           };
         }
         if (part.type === "finish") {
@@ -65,6 +80,8 @@ export async function handleChatStream(request: Request): Promise<Response> {
             totalTokens: part.totalUsage.totalTokens,
             promptTokens: part.totalUsage.inputTokens,
             completionTokens: part.totalUsage.outputTokens,
+            cachedInputTokens: part.totalUsage.cachedInputTokens ?? 0,
+            reasoningTokens: part.totalUsage.reasoningTokens ?? 0,
           };
         }
       },

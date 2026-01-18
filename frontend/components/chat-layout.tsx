@@ -3,7 +3,6 @@ import { api } from "../api";
 import { useSession, signOut } from "../auth-client";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "./ui/button";
-import { Select, SelectOption } from "./ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,7 +13,12 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "./ui/alert-dialog";
-import { Shimmer } from "./ai-elements/shimmer";
+import { ModeToggle } from "./mode-toggle";
+
+// Skeleton component for loading state
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-muted rounded ${className ?? ""}`} />;
+}
 
 interface ChatLayoutProps {
   children: ReactNode;
@@ -24,7 +28,6 @@ interface ChatLayoutProps {
 export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
   const { data: session, isPending } = useSession();
   const navigate = useNavigate();
-  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-5-20250929");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
@@ -51,18 +54,12 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
   const conversations = conversationsData?.data ?? [];
   const models = modelsData?.data ?? [];
 
-  // Set default model when models are loaded
-  useEffect(() => {
-    const modelsList = modelsData?.data ?? [];
-    const firstModel = modelsList[0];
-    if (modelsList.length > 0 && firstModel && !modelsList.find((m) => m.modelId === selectedModel)) {
-      setSelectedModel(firstModel.modelId);
-    }
-  }, [modelsData?.data, selectedModel]);
+  // Use first available model as default for new chats
+  const defaultModel = models[0]?.modelId ?? "claude-sonnet-4-5-20250929";
 
   const handleNewChat = async () => {
     const result = await createConversation.mutateAsync({
-      body: { modelId: selectedModel },
+      body: { modelId: defaultModel },
     });
     await refetch();
     if (result.data && "id" in result.data) {
@@ -91,21 +88,21 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
       <div className="h-screen flex bg-background">
         {/* Sidebar Skeleton */}
         <div className="w-64 bg-card flex flex-col border-r border-border p-4 space-y-4">
-          <Shimmer className="h-10 w-full rounded" />
-          <Shimmer className="h-10 w-full rounded" />
+          <Skeleton className="h-10 w-full rounded" />
+          <Skeleton className="h-10 w-full rounded" />
           <div className="flex-1 space-y-2 mt-4">
-            <Shimmer className="h-8 w-full rounded" />
-            <Shimmer className="h-8 w-full rounded" />
-            <Shimmer className="h-8 w-3/4 rounded" />
+            <Skeleton className="h-8 w-full rounded" />
+            <Skeleton className="h-8 w-full rounded" />
+            <Skeleton className="h-8 w-3/4 rounded" />
           </div>
-          <Shimmer className="h-8 w-full rounded mt-auto" />
+          <Skeleton className="h-8 w-full rounded mt-auto" />
         </div>
         {/* Main Content Skeleton */}
         <div className="flex-1 flex items-center justify-center">
           <div className="space-y-4 w-full max-w-md px-6">
-            <Shimmer className="h-6 w-48" />
-            <Shimmer className="h-4 w-full" />
-            <Shimmer className="h-4 w-3/4" />
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         </div>
       </div>
@@ -138,21 +135,6 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
             </svg>
             New Chat
           </Button>
-        </div>
-
-        {/* Model Selector */}
-        <div className="p-4 border-b border-border">
-          <label className="text-xs text-muted-foreground mb-1 block">Model</label>
-          <Select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-          >
-            {models.map((model) => (
-              <SelectOption key={model.modelId} value={model.modelId}>
-                {model.displayName}
-              </SelectOption>
-            ))}
-          </Select>
         </div>
 
         {/* Conversations List */}
@@ -237,26 +219,29 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
         {/* User Footer */}
         <div className="p-4 border-t border-border flex items-center justify-between">
           <span className="text-muted-foreground text-sm truncate">{session.user.name}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSignOut}
-            title="Sign out"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-1">
+            <ModeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              title="Sign out"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </Button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+            </Button>
+          </div>
         </div>
       </div>
 

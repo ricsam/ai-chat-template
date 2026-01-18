@@ -23,7 +23,9 @@
       "@/env": ["../frontend-env.ts"],
       "@/shared/*": ["../shared/*"],
       "@/route-tree": ["../../runtime/route-tree.gen.ts"],
-      "@/frontend/*": ["./*"]
+      "@/frontend/*": ["./*"],
+      "@/components/*": ["../../../../src/components/*"],
+      "streamdown/dist/*": ["../../../../node_modules/streamdown/dist/*"]
     }
   },
   "include": [

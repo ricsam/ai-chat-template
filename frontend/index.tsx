@@ -4,6 +4,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { queryClient } from "./api";
 import { router } from "./router";
+import { ThemeProvider } from "./components/theme-provider";
 import "./styles.css";
 
 // Error Boundary component
@@ -63,11 +64,13 @@ const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <React.Suspense fallback={<LoadingFallback />}>
-          <RouterProvider router={router} />
-        </React.Suspense>
-      </ErrorBoundary>
+      <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
+        <ErrorBoundary>
+          <React.Suspense fallback={<LoadingFallback />}>
+            <RouterProvider router={router} />
+          </React.Suspense>
+        </ErrorBoundary>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -564,7 +564,21 @@ import { generateText, streamText } from "ai";
 // List available models (from database)
 const models = await getModels();
 console.log(models);
-// [{ modelId: "claude-opus-4-5-20251101", displayName: "Claude Opus 4.5" }, ...]
+// [{ modelId: "claude-opus-4-5-20251101", displayName: "Claude Opus 4.5", thinking: true, inputPricePerMTok: ... }, ...]
+
+function getModels(): Promise<ModelInfo>
+
+interface ModelInfo {
+  modelId: string;
+  displayName: string;
+  thinking: boolean;
+  contextWindow: number;
+  inputPricePerMTok: number;
+  outputPricePerMTok: number;
+  cacheWrite5mPricePerMTok: number | null;
+  cacheWrite1hPricePerMTok: number | null;
+  cacheReadPricePerMTok: number | null;
+}
 
 // Non-streaming text generation
 const result = await generateText({
