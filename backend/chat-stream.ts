@@ -9,6 +9,8 @@ import {
   type UIMessage,
 } from "ai";
 import { buildItNow } from "@/ai-sdk-provider";
+import { findRelevantContent, type SearchResult } from "./embedding";
+import type { Citation } from "@/shared/types";
 
 // POST /chat - Streaming chat endpoint for useChat hook
 export async function handleChatStream(request: Request): Promise<Response> {
@@ -40,13 +42,70 @@ export async function handleChatStream(request: Request): Promise<Response> {
     const previousMessages = (await loadChat(chatId)) as UIMessage[];
     const messages = [...previousMessages, message];
 
+    // Extract text from the user's message for RAG search
+    const userMessageText = message.parts
+      .filter((part): part is { type: "text"; text: string } => part.type === "text")
+      .map((part) => part.text)
+      .join(" ");
+
+    // Search knowledge base for relevant content
+    let citations: Citation[] = [];
+    let ragContext = "";
+
+    try {
+      const relevantContent = await findRelevantContent(auth.userId, userMessageText, 5, 0.3);
+
+      if (relevantContent.length > 0) {
+        citations = relevantContent.map((result, index) => ({
+          number: String(index + 1),
+          documentId: result.documentId,
+          fileName: result.fileName,
+          content: result.content,
+          pageNumber: result.pageNumber,
+          similarity: result.similarity,
+        }));
+
+        // Build RAG context for the system prompt
+        ragContext = relevantContent
+          .map(
+            (r, i) =>
+              `[${i + 1}] From "${r.fileName}"${r.pageNumber ? ` (page ${r.pageNumber})` : ""}:\n${r.content}`
+          )
+          .join("\n\n");
+      }
+    } catch (error) {
+      // RAG search failed, continue without context
+      console.error("RAG search error:", error);
+    }
+
+    // Build system prompt with RAG context
+    let systemPrompt = "";
+    if (ragContext) {
+      systemPrompt = `You have access to the user's knowledge base. Use the following relevant information to help answer questions. When you use information from the knowledge base, cite it using [1], [2], etc. format corresponding to the source numbers below.
+
+KNOWLEDGE BASE CONTEXT:
+${ragContext}
+
+CITATION INSTRUCTIONS:
+- When using information from the knowledge base, include inline citations like [1], [2], etc.
+- Only cite sources that are directly relevant to your answer
+- You can cite multiple sources in a single sentence if needed
+- If the knowledge base doesn't contain relevant information for a question, answer based on your general knowledge without citations`;
+    }
+
     // Convert messages
     const modelMessages = await convertToModelMessages(messages);
+
+    console.log("modelMessages", modelMessages);
+    console.log("systemPrompt", systemPrompt);
+    console.log("thinkingEnabled", thinkingEnabled);
+    console.log("selectedModel", selectedModel);
 
     // Stream AI response with optional thinking mode
     const result = streamText({
       model: buildItNow(selectedModel),
       messages: modelMessages,
+      ...(systemPrompt && { system: systemPrompt }),
       ...(thinkingEnabled && {
         providerOptions: {
           anthropic: {
@@ -54,6 +113,21 @@ export async function handleChatStream(request: Request): Promise<Response> {
           },
         },
       }),
+      'onError': (error) => {
+        console.error("onError", error);
+      },
+      'onChunk': (chunk) => {
+        // console.log("onChunk");
+      },
+      'onFinish': (result) => {
+        console.log("onFinish");
+      },
+      'onAbort': (result) => {
+        console.log("onAbort");
+      },
+      'onStepFinish': (result) => { 
+        console.log("onStepFinish");
+      },
     });
 
     // Return UIMessageStream format for useChat hook
@@ -73,6 +147,8 @@ export async function handleChatStream(request: Request): Promise<Response> {
             createdAt: Date.now(),
             model: selectedModel,
             thinkingEnabled: thinkingEnabled ?? false,
+            citations: citations.length > 0 ? citations : undefined,
+            ragEnabled: citations.length > 0,
           };
         }
         if (part.type === "finish") {
@@ -87,6 +163,7 @@ export async function handleChatStream(request: Request): Promise<Response> {
       },
       // Save messages when stream completes
       onFinish: ({ messages: updatedMessages }) => {
+        console.log("onFinish", updatedMessages);
         saveChat({ chatId, messages: updatedMessages });
       },
     });

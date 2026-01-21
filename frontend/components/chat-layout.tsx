@@ -2,7 +2,7 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { api } from "../api";
 import { useSession, signOut } from "../auth-client";
 import { useEffect, useState, type ReactNode } from "react";
-import { Button } from "./ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,8 +12,9 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "./ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 import { ModeToggle } from "./mode-toggle";
+import { IconBook } from "@tabler/icons-react";
 
 // Skeleton component for loading state
 function Skeleton({ className }: { className?: string }) {
@@ -114,7 +115,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
       {/* Sidebar */}
       <div className="w-64 bg-card flex flex-col border-r border-border">
         {/* Header */}
-        <div className="p-4 border-b border-border">
+        <div className="p-4 border-b border-border space-y-2">
           <Button
             onClick={handleNewChat}
             disabled={createConversation.isPending}
@@ -135,6 +136,13 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
             </svg>
             New Chat
           </Button>
+          <Link
+            to="/knowledge-base"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors"
+          >
+            <IconBook size={16} />
+            Knowledge Base
+          </Link>
         </div>
 
         {/* Conversations List */}
@@ -204,7 +212,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      variant="destructive"
+                      className={buttonVariants({ variant: "destructive" })}
                       onClick={handleDeleteConfirm}
                     >
                       Delete

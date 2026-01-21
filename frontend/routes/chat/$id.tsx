@@ -1,57 +1,70 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useRef, useState, useMemo } from "react";
-import { api, queryClient } from "../../api";
-import { ChatLayout } from "../../components/chat-layout";
-import type { MessageMetadata } from "@/shared/types";
-import env from "@/env";
-import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
-import { Message, MessageContent, MessageResponse, MessageActions, MessageAction } from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputTextarea,
-  PromptInputFooter,
-  PromptInputTools,
-  PromptInputSubmit,
-  PromptInputBody,
-  PromptInputHeader,
-  PromptInputAttachments,
-  PromptInputAttachment,
-  PromptInputActionMenu,
-  PromptInputActionMenuTrigger,
-  PromptInputActionMenuContent,
-  PromptInputActionAddAttachments,
-  PromptInputButton,
-  type PromptInputMessage,
-} from "@/components/ai-elements/prompt-input";
-import {
-  ModelSelector,
-  ModelSelectorTrigger,
-  ModelSelectorContent,
-  ModelSelectorInput,
-  ModelSelectorList,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
-  ModelSelectorItem,
-  ModelSelectorLogo,
-  ModelSelectorName,
-} from "@/components/ai-elements/model-selector";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import {
   Context,
-  ContextTrigger,
+  ContextCacheUsage,
   ContextContent,
-  ContextContentHeader,
   ContextContentBody,
+  ContextContentFooter,
+  ContextContentHeader,
   ContextInputUsage,
   ContextOutputUsage,
   ContextReasoningUsage,
-  ContextCacheUsage,
-  ContextContentFooter,
+  ContextTrigger,
 } from "@/components/ai-elements/context";
-import { Loader } from "@/components/ai-elements/loader";
-import { IconCopy, IconBrain, IconCheck } from "@tabler/icons-react";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
+import { Message, MessageAction, MessageActions, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorInput,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorName,
+  ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector";
+import {
+  PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  PromptInputAttachment,
+  PromptInputAttachments,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputProvider,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+  usePromptInputAttachments,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input";
+import {
+  Queue,
+  QueueItem,
+  QueueItemAction,
+  QueueItemActions,
+  QueueItemContent,
+  QueueItemIndicator,
+  QueueList,
+} from "@/components/ai-elements/queue";
+import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import env from "@/env";
+import type { MessageMetadata } from "@/shared/types";
+import { useChat } from "@ai-sdk/react";
+import { IconBook, IconBrain, IconCheck, IconCopy, IconX } from "@tabler/icons-react";
+import { createFileRoute } from "@tanstack/react-router";
+import type { FileUIPart } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, queryClient } from "../../api";
+import { ChatLayout } from "../../components/chat-layout";
+import { CitationMarkdownRenderer } from "../../components/citation-pill";
 
 // Skeleton component for loading state
 function Skeleton({ className }: { className?: string }) {
@@ -71,11 +84,20 @@ type ModelInfo = {
   maxTokens?: number;
 };
 
+type QueuedMessage = {
+  id: string;
+  text: string;
+  files: FileUIPart[];
+  modelId: string;
+  thinkingEnabled: boolean;
+};
+
 function ChatView() {
   const { id } = Route.useParams();
   const [input, setInput] = useState("");
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([]);
   // Track which chat ID we've initialized to avoid re-syncing on query refetch
   const initializedChatRef = useRef<string | null>(null);
 
@@ -136,12 +158,13 @@ function ChatView() {
     setMessages,
     sendMessage,
     status,
+    stop,
     error: chatError,
   } = useChat({
     id, // use the conversation ID
     experimental_throttle: 50, // Throttle updates to every 50ms
     transport: new DefaultChatTransport({
-      api: env.API_BASE_URL + "/chat",
+      api: env.BASE_URL + "/api/chat",
       credentials: "include",
       // Only send the last message to the server (we load previous from storage)
       prepareSendMessagesRequest({ messages: msgs, id: chatId }) {
@@ -149,9 +172,23 @@ function ChatView() {
       },
     }),
     onFinish() {
-      // Only invalidate sidebar list, not the conversation query
-      // (to avoid useEffect overwriting useChat's state)
+      // Invalidate both sidebar and conversation query so fresh data is available
+      // when user navigates away and back. The sync effect won't overwrite during
+      // streaming because initializedChatRef.current === id at that point.
       queryClient.invalidateQueries({ queryKey: ["listConversations"] });
+      queryClient.invalidateQueries({ queryKey: ["getConversation", id] });
+
+      // Process next queued message
+      setMessageQueue((prev) => {
+        if (prev.length === 0) return prev;
+        const [next, ...rest] = prev;
+        if (next) {
+          setTimeout(() => {
+            sendMessage({ text: next.text, files: next.files }, { body: { modelId: next.modelId, thinkingEnabled: next.thinkingEnabled } });
+          }, 0);
+        }
+        return rest;
+      });
     },
   });
 
@@ -192,7 +229,22 @@ function ChatView() {
   // Handle prompt input submission
   const handleSubmit = (message: PromptInputMessage) => {
     if (!message.text?.trim()) return;
-    if (status === "streaming" || status === "submitted") return;
+
+    if (status === "streaming" || status === "submitted") {
+      // Queue message instead of blocking
+      setMessageQueue((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          text: message.text,
+          files: message.files,
+          modelId: selectedModel,
+          thinkingEnabled,
+        },
+      ]);
+      setInput("");
+      return;
+    }
 
     // Send with per-message model and thinking mode
     sendMessage(
@@ -205,6 +257,11 @@ function ChatView() {
       },
     );
     setInput("");
+  };
+
+  // Remove a message from the queue
+  const removeFromQueue = (id: string) => {
+    setMessageQueue((prev) => prev.filter((m) => m.id !== id));
   };
 
   // Copy message text to clipboard
@@ -279,17 +336,65 @@ function ChatView() {
 
             {messages.map((message: UIMessage, msgIndex: number) => {
               const metadata = message.metadata as MessageMetadata | undefined;
+              const isStreaming = status === "streaming" && message.id === messages.at(-1)?.id;
+              const hasTextContent = message.parts.some((p) => p.type === "text" && p.text);
               return (
                 <div key={message.id}>
+                  {/* Show shimmer for streaming assistant message with no content yet */}
+                  {message.role === "assistant" && isStreaming && !hasTextContent && (
+                    <Message from="assistant">
+                      <MessageContent>
+                        <Shimmer className="text-sm">Thinking...</Shimmer>
+                      </MessageContent>
+                    </Message>
+                  )}
                   {message.parts.map((part: { type: string; text?: string }, i: number) => {
                     if (part.type === "text" && part.text) {
+                      const hasCitations = message.role === "assistant" && metadata?.citations && metadata.citations.length > 0;
+
                       return (
                         <Message key={`${message.id}-${i}`} from={message.role}>
                           <MessageContent>
-                            <MessageResponse>{part.text}</MessageResponse>
+                            {hasCitations ? (
+                              <CitationMarkdownRenderer text={part.text} citations={metadata?.citations} />
+                            ) : (
+                              <MessageResponse>{part.text}</MessageResponse>
+                            )}
                           </MessageContent>
-                          {message.role === "assistant" && (
-                            <MessageActions>
+                          {message.role === "assistant" && !isStreaming && (
+                            <MessageActions className="flex items-center gap-2">
+                              {/* Token usage and model info */}
+                              {metadata?.totalTokens && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <span>{metadata.model}</span>
+                                  <span>·</span>
+                                  <span>{metadata.totalTokens} tokens</span>
+                                  {metadata.ragEnabled && (
+                                    <>
+                                      <span>·</span>
+                                      <span className="flex items-center gap-0.5">
+                                        <IconBook size={10} />
+                                        RAG
+                                      </span>
+                                    </>
+                                  )}
+                                  {metadata.thinkingEnabled && (
+                                    <>
+                                      <span>·</span>
+                                      <span className="flex items-center gap-0.5">
+                                        <IconBrain size={10} />
+                                        thinking
+                                      </span>
+                                    </>
+                                  )}
+                                  {metadata.createdAt && (
+                                    <>
+                                      <span>·</span>
+                                      <span>{new Date(metadata.createdAt).toLocaleTimeString()}</span>
+                                    </>
+                                  )}
+                                </span>
+                              )}
                               <MessageAction label="Copy" onClick={() => copyToClipboard(part.text || "")}>
                                 <IconCopy size={12} />
                               </MessageAction>
@@ -300,9 +405,10 @@ function ChatView() {
                     }
                     // Handle reasoning parts for thinking mode
                     if (part.type === "reasoning" && part.text) {
-                      const isStreaming = status === "streaming" && i === message.parts.length - 1 && message.id === messages.at(-1)?.id;
+                      const isReasoningStreaming =
+                        status === "streaming" && i === message.parts.length - 1 && message.id === messages.at(-1)?.id;
                       return (
-                        <Reasoning key={`${message.id}-${i}`} className="w-full mb-2" isStreaming={isStreaming}>
+                        <Reasoning key={`${message.id}-${i}`} className="w-full mb-2" isStreaming={isReasoningStreaming}>
                           <ReasoningTrigger />
                           <ReasoningContent>{part.text}</ReasoningContent>
                         </Reasoning>
@@ -310,36 +416,18 @@ function ChatView() {
                     }
                     return null;
                   })}
-
-                  {/* Token usage and model info (assistant messages only) */}
-                  {message.role === "assistant" && metadata?.totalTokens && (
-                    <div className="mt-1 text-xs text-muted-foreground px-2 flex items-center gap-2">
-                      <span>{metadata.model}</span>
-                      <span>·</span>
-                      <span>{metadata.totalTokens} tokens</span>
-                      {metadata.thinkingEnabled && (
-                        <>
-                          <span>·</span>
-                          <span className="flex items-center gap-1">
-                            <IconBrain size={10} />
-                            thinking
-                          </span>
-                        </>
-                      )}
-                      {metadata.createdAt && (
-                        <>
-                          <span>·</span>
-                          <span>{new Date(metadata.createdAt).toLocaleTimeString()}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}
 
-            {/* Loading indicator when waiting for response */}
-            {status === "submitted" && <Loader />}
+            {/* Loading indicator when waiting for response (before streaming message exists) */}
+            {status === "submitted" && (
+              <Message from="assistant">
+                <MessageContent>
+                  <Shimmer className="text-sm">Thinking...</Shimmer>
+                </MessageContent>
+              </Message>
+            )}
 
             {chatError && (
               <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-4 text-center">
@@ -352,98 +440,140 @@ function ChatView() {
 
         {/* Input */}
         <div className="p-4 border-t border-border">
-          <PromptInput onSubmit={handleSubmit} globalDrop multiple>
-            <PromptInputHeader>
-              <PromptInputAttachments>{(attachment) => <PromptInputAttachment data={attachment} />}</PromptInputAttachments>
-            </PromptInputHeader>
-            <PromptInputBody>
-              <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
-            </PromptInputBody>
-            <PromptInputFooter>
-              <PromptInputTools>
-                {/* Attachments action menu */}
-                <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger />
-                  <PromptInputActionMenuContent>
-                    <PromptInputActionAddAttachments />
-                  </PromptInputActionMenuContent>
-                </PromptInputActionMenu>
+          {messageQueue.length > 0 && (
+            <Queue className="mb-3">
+              <QueueList>
+                {messageQueue.map((queuedMsg, index) => (
+                  <QueueItem key={queuedMsg.id}>
+                    <div className="flex items-center gap-2">
+                      <QueueItemIndicator />
+                      <QueueItemContent className="flex-1 truncate">
+                        <span className="text-muted-foreground text-xs mr-2">#{index + 1}</span>
+                        {queuedMsg.text.length > 50 ? queuedMsg.text.substring(0, 50) + "..." : queuedMsg.text}
+                      </QueueItemContent>
+                      <QueueItemActions>
+                        <QueueItemAction onClick={() => removeFromQueue(queuedMsg.id)} aria-label="Remove">
+                          <IconX size={14} />
+                        </QueueItemAction>
+                      </QueueItemActions>
+                    </div>
+                  </QueueItem>
+                ))}
+              </QueueList>
+            </Queue>
+          )}
+          <PromptInputProvider>
+            <PromptInput onSubmit={handleSubmit} globalDrop multiple>
+            <PromptInputAttachments>{(attachment) => <PromptInputAttachment data={attachment} />}</PromptInputAttachments>
+              <PromptInputBody>
+                <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
+              </PromptInputBody>
+              <PromptInputFooter>
+                <PromptInputTools>
+                  {/* Attachments action menu */}
+                  <PromptInputActionMenu>
+                    <PromptInputActionMenuTrigger />
+                    <PromptInputActionMenuContent>
+                      <PromptInputActionAddAttachments />
+                    </PromptInputActionMenuContent>
+                  </PromptInputActionMenu>
 
-                {/* Context/Token usage - only show if model has maxTokens */}
-                {selectedModelInfo.maxTokens && cumulativeTokens.total > 0 && (
-                  <Context
-                    maxTokens={selectedModelInfo.maxTokens}
-                    modelId={selectedModel ?? ""}
-                    usage={{
-                      inputTokens: cumulativeTokens.inputTokens,
-                      outputTokens: cumulativeTokens.outputTokens,
-                      totalTokens: cumulativeTokens.total,
-                      cachedInputTokens: cumulativeTokens.cached,
-                      reasoningTokens: cumulativeTokens.reasoning,
-                    }}
-                    usedTokens={cumulativeTokens.total}
-                  >
-                    <ContextTrigger />
-                    <ContextContent>
-                      <ContextContentHeader />
-                      <ContextContentBody>
-                        <ContextInputUsage />
-                        <ContextOutputUsage />
-                        {cumulativeTokens.reasoning > 0 && <ContextReasoningUsage />}
-                        {cumulativeTokens.cached > 0 && <ContextCacheUsage />}
-                      </ContextContentBody>
-                      <ContextContentFooter />
-                    </ContextContent>
-                  </Context>
-                )}
+                  {/* Context/Token usage - only show if model has maxTokens */}
+                  {selectedModelInfo.maxTokens && cumulativeTokens.total > 0 && (
+                    <Context
+                      maxTokens={selectedModelInfo.maxTokens}
+                      modelId={selectedModel ?? ""}
+                      usage={{
+                        inputTokens: cumulativeTokens.inputTokens,
+                        outputTokens: cumulativeTokens.outputTokens,
+                        totalTokens: cumulativeTokens.total,
+                        cachedInputTokens: cumulativeTokens.cached,
+                        reasoningTokens: cumulativeTokens.reasoning,
+                        inputTokenDetails: {
+                          noCacheTokens: undefined,
+                          cacheReadTokens: cumulativeTokens.cached || undefined,
+                          cacheWriteTokens: undefined,
+                        },
+                        outputTokenDetails: {
+                          textTokens: cumulativeTokens.outputTokens || undefined,
+                          reasoningTokens: cumulativeTokens.reasoning || undefined,
+                        },
+                      }}
+                      usedTokens={cumulativeTokens.total}
+                    >
+                      <ContextTrigger />
+                      <ContextContent>
+                        <ContextContentHeader />
+                        <ContextContentBody>
+                          <ContextInputUsage />
+                          <ContextOutputUsage />
+                          {cumulativeTokens.reasoning > 0 && <ContextReasoningUsage />}
+                          {cumulativeTokens.cached > 0 && <ContextCacheUsage />}
+                        </ContextContentBody>
+                        <ContextContentFooter />
+                      </ContextContent>
+                    </Context>
+                  )}
 
-                {/* Model selector */}
-                <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
-                  <ModelSelectorTrigger>
-                    <PromptInputButton>
-                      <ModelSelectorLogo provider={selectedModelInfo.provider} />
-                      <ModelSelectorName className="max-w-[120px] truncate">{selectedModelInfo.displayName}</ModelSelectorName>
+                  {/* Model selector */}
+                  <ModelSelector open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+                    <ModelSelectorTrigger asChild>
+                      <PromptInputButton>
+                        <ModelSelectorLogo provider={selectedModelInfo.provider} />
+                        <ModelSelectorName className="max-w-[120px] truncate">{selectedModelInfo.displayName}</ModelSelectorName>
+                      </PromptInputButton>
+                    </ModelSelectorTrigger>
+                    <ModelSelectorContent>
+                      <ModelSelectorInput placeholder="Search models..." />
+                      <ModelSelectorList>
+                        <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+                        {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+                          <ModelSelectorGroup heading={provider} key={provider}>
+                            {providerModels.map((model) => (
+                              <ModelSelectorItem key={model.modelId} onSelect={() => handleModelSelect(model)} value={model.modelId}>
+                                <ModelSelectorLogo provider={model.provider} />
+                                <ModelSelectorName>{model.displayName}</ModelSelectorName>
+                                {model.thinking && (
+                                  <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+                                    <IconBrain size={12} />
+                                  </span>
+                                )}
+                                {selectedModel === model.modelId && <IconCheck size={14} className="ml-1 text-primary" />}
+                              </ModelSelectorItem>
+                            ))}
+                          </ModelSelectorGroup>
+                        ))}
+                      </ModelSelectorList>
+                    </ModelSelectorContent>
+                  </ModelSelector>
+
+                  {/* Thinking mode toggle - only for models that support it */}
+                  {selectedModelInfo.thinking && (
+                    <PromptInputButton
+                      variant={thinkingEnabled ? "default" : "ghost"}
+                      onClick={toggleThinking}
+                      title={thinkingEnabled ? "Thinking mode enabled" : "Enable thinking mode"}
+                    >
+                      <IconBrain size={16} />
+                      <span className="hidden sm:inline">Think</span>
                     </PromptInputButton>
-                  </ModelSelectorTrigger>
-                  <ModelSelectorContent>
-                    <ModelSelectorInput placeholder="Search models..." />
-                    <ModelSelectorList>
-                      <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                      {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
-                        <ModelSelectorGroup heading={provider} key={provider}>
-                          {providerModels.map((model) => (
-                            <ModelSelectorItem key={model.modelId} onSelect={() => handleModelSelect(model)} value={model.modelId}>
-                              <ModelSelectorLogo provider={model.provider} />
-                              <ModelSelectorName>{model.displayName}</ModelSelectorName>
-                              {model.thinking && (
-                                <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
-                                  <IconBrain size={12} />
-                                </span>
-                              )}
-                              {selectedModel === model.modelId && <IconCheck size={14} className="ml-1 text-primary" />}
-                            </ModelSelectorItem>
-                          ))}
-                        </ModelSelectorGroup>
-                      ))}
-                    </ModelSelectorList>
-                  </ModelSelectorContent>
-                </ModelSelector>
-
-                {/* Thinking mode toggle - only for models that support it */}
-                {selectedModelInfo.thinking && (
-                  <PromptInputButton
-                    variant={thinkingEnabled ? "default" : "ghost"}
-                    onClick={toggleThinking}
-                    title={thinkingEnabled ? "Thinking mode enabled" : "Enable thinking mode"}
-                  >
-                    <IconBrain size={16} />
-                    <span className="hidden sm:inline">Think</span>
-                  </PromptInputButton>
-                )}
-              </PromptInputTools>
-              <PromptInputSubmit disabled={!input.trim()} status={status === "streaming" || status === "submitted" ? status : undefined} />
-            </PromptInputFooter>
-          </PromptInput>
+                  )}
+                </PromptInputTools>
+                <PromptInputSubmit
+                  disabled={!input.trim() && status !== "streaming" && status !== "submitted"}
+                  status={status === "streaming" || status === "submitted" ? status : undefined}
+                  onClick={
+                    status === "streaming" || status === "submitted"
+                      ? (e) => {
+                          e.preventDefault();
+                          stop();
+                        }
+                      : undefined
+                  }
+                />
+              </PromptInputFooter>
+            </PromptInput>
+          </PromptInputProvider>
         </div>
       </div>
     </ChatLayout>

@@ -9,6 +9,15 @@ const ConversationSchema = z.object({
   updatedAt: z.string(),
 });
 
+const DocumentSchema = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  fileType: z.string(),
+  fileSize: z.number(),
+  createdAt: z.string(),
+  status: z.enum(["pending", "processing", "indexed", "failed"]),
+});
+
 export const contract = defineContract({
   // Get available AI models
   getModels: {
@@ -89,6 +98,67 @@ export const contract = defineContract({
     params: z.object({ id: z.string() }),
     responses: {
       [Status.OK]: z.object({ success: z.boolean() }),
+      [Status.NotFound]: z.object({ error: z.string() }),
+    },
+  },
+
+  // Knowledge Base - List documents
+  listDocuments: {
+    type: "standard",
+    method: "GET",
+    path: "/knowledge-base/documents",
+    responses: {
+      [Status.OK]: z.array(DocumentSchema),
+    },
+  },
+
+  // Knowledge Base - Delete document
+  deleteDocument: {
+    type: "standard",
+    method: "DELETE",
+    path: "/knowledge-base/documents/:id",
+    params: z.object({ id: z.string() }),
+    responses: {
+      [Status.OK]: z.object({ success: z.boolean() }),
+      [Status.NotFound]: z.object({ error: z.string() }),
+    },
+  },
+
+  // Knowledge Base - Get single document with details
+  getDocument: {
+    type: "standard",
+    method: "GET",
+    path: "/knowledge-base/documents/:id",
+    params: z.object({ id: z.string() }),
+    responses: {
+      [Status.OK]: z.object({
+        id: z.string(),
+        fileName: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        markdownContent: z.string().nullable(),
+        createdAt: z.string(),
+        status: z.enum(["pending", "processing", "indexed", "failed"]),
+        error: z.string().nullable(),
+        chunksCount: z.number().nullable(),
+      }),
+      [Status.NotFound]: z.object({ error: z.string() }),
+    },
+  },
+
+  // Knowledge Base - Get document chunks
+  getDocumentChunks: {
+    type: "standard",
+    method: "GET",
+    path: "/knowledge-base/documents/:id/chunks",
+    params: z.object({ id: z.string() }),
+    responses: {
+      [Status.OK]: z.array(z.object({
+        id: z.string(),
+        content: z.string(),
+        blockType: z.string().nullable(),
+        pageNumber: z.number().nullable(),
+      })),
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },

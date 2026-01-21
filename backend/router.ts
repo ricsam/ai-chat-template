@@ -11,6 +11,9 @@ import {
 } from "./chat-store";
 import { readJsonFile, writeJsonFile } from "./storage";
 import { authenticateRequest } from "./auth";
+import db from "@/db";
+import { documentsTable, embeddingsTable } from "./schema";
+import { eq, and, desc } from "drizzle-orm";
 
 interface RouterContext {
   getUserId: () => string;
@@ -145,11 +148,127 @@ export const router = createRouter<typeof contract, RouterContext>(
 
       return { status: Status.OK, body: { success: true } };
     },
+
+    // Knowledge Base - List documents
+    listDocuments: async ({ context }) => {
+      const userId = context.getUserId();
+      const documents = await db
+        .select({
+          id: documentsTable.id,
+          fileName: documentsTable.fileName,
+          fileType: documentsTable.fileType,
+          fileSize: documentsTable.fileSize,
+          status: documentsTable.status,
+          createdAt: documentsTable.createdAt,
+        })
+        .from(documentsTable)
+        .where(eq(documentsTable.userId, userId))
+        .orderBy(desc(documentsTable.createdAt));
+
+      return {
+        status: Status.OK,
+        body: documents.map((doc) => ({
+          id: doc.id,
+          fileName: doc.fileName,
+          fileType: doc.fileType,
+          fileSize: doc.fileSize,
+          createdAt: doc.createdAt.toISOString(),
+          status: doc.status as "pending" | "processing" | "indexed" | "failed",
+        })),
+      };
+    },
+
+    // Knowledge Base - Delete document
+    deleteDocument: async ({ params, context }) => {
+      const userId = context.getUserId();
+
+      // Check if document exists and belongs to user
+      const [doc] = await db
+        .select({ id: documentsTable.id })
+        .from(documentsTable)
+        .where(and(eq(documentsTable.id, params.id), eq(documentsTable.userId, userId)))
+        .limit(1);
+
+      if (!doc) {
+        return { status: Status.NotFound, body: { error: "Document not found" } };
+      }
+
+      // Delete document (embeddings will cascade delete)
+      await db.delete(documentsTable).where(eq(documentsTable.id, params.id));
+
+      return { status: Status.OK, body: { success: true } };
+    },
+
+    // Knowledge Base - Get single document with details
+    getDocument: async ({ params, context }) => {
+      const userId = context.getUserId();
+      const [doc] = await db
+        .select()
+        .from(documentsTable)
+        .where(and(eq(documentsTable.id, params.id), eq(documentsTable.userId, userId)))
+        .limit(1);
+
+      if (!doc) {
+        return { status: Status.NotFound, body: { error: "Document not found" } };
+      }
+
+      return {
+        status: Status.OK,
+        body: {
+          id: doc.id,
+          fileName: doc.fileName,
+          fileType: doc.fileType,
+          fileSize: doc.fileSize,
+          markdownContent: doc.markdownContent,
+          createdAt: doc.createdAt.toISOString(),
+          status: doc.status as "pending" | "processing" | "indexed" | "failed",
+          error: doc.error,
+          chunksCount: doc.chunksCount,
+        },
+      };
+    },
+
+    // Knowledge Base - Get document chunks
+    getDocumentChunks: async ({ params, context }) => {
+      const userId = context.getUserId();
+
+      // First verify the document exists and belongs to user
+      const [doc] = await db
+        .select({ id: documentsTable.id })
+        .from(documentsTable)
+        .where(and(eq(documentsTable.id, params.id), eq(documentsTable.userId, userId)))
+        .limit(1);
+
+      if (!doc) {
+        return { status: Status.NotFound, body: { error: "Document not found" } };
+      }
+
+      // Fetch chunks for this document
+      const chunks = await db
+        .select({
+          id: embeddingsTable.id,
+          content: embeddingsTable.content,
+          blockType: embeddingsTable.blockType,
+          pageNumber: embeddingsTable.pageNumber,
+        })
+        .from(embeddingsTable)
+        .where(eq(embeddingsTable.documentId, params.id));
+
+      return {
+        status: Status.OK,
+        body: chunks.map((chunk) => ({
+          id: chunk.id,
+          content: chunk.content,
+          blockType: chunk.blockType,
+          pageNumber: chunk.pageNumber,
+        })),
+      };
+    },
   },
   {
     // Note: The serve script strips the /api prefix before sending to backend
     // So paths arrive as /conversations, /models, etc. - no basePath needed
-    basePath: "",
+    basePath: "/api/router",
     async context(request) {
       const auth = await authenticateRequest(request);
       if (!auth) {

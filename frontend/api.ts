@@ -4,9 +4,9 @@ import { contract } from "@/shared/contract";
 import { QueryClient } from "@tanstack/react-query";
 import env from "@/env";
 
-// REST client
+// REST client - uses relative path for API calls
 export const client = createClient(contract, {
-  baseUrl: env.API_BASE_URL,
+  baseUrl: env.BASE_URL + "/api/router",
 });
 
 // React Query hooks

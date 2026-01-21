@@ -10,6 +10,18 @@ export const fileAttachmentSchema = z.object({
 
 export type FileAttachment = z.infer<typeof fileAttachmentSchema>;
 
+// Schema for RAG citations
+export const citationSchema = z.object({
+  number: z.string(),
+  documentId: z.string(),
+  fileName: z.string(),
+  content: z.string(),
+  pageNumber: z.number().nullable(),
+  similarity: z.number(),
+});
+
+export type Citation = z.infer<typeof citationSchema>;
+
 // Schema for message metadata (token usage, timestamps, model info)
 export const messageMetadataSchema = z.object({
   createdAt: z.number().optional(),
@@ -21,6 +33,9 @@ export const messageMetadataSchema = z.object({
   reasoningTokens: z.number().optional(),
   thinkingEnabled: z.boolean().optional(),
   files: z.array(fileAttachmentSchema).optional(),
+  // RAG citation fields
+  citations: z.array(citationSchema).optional(),
+  ragEnabled: z.boolean().optional(),
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;

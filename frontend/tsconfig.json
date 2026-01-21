@@ -25,6 +25,7 @@
       "@/route-tree": ["../../runtime/route-tree.gen.ts"],
       "@/frontend/*": ["./*"],
       "@/components/*": ["../../../../src/components/*"],
+      "@/lib/*": ["../../../../src/components/lib/*"],
       "streamdown/dist/*": ["../../../../node_modules/streamdown/dist/*"]
     }
   },

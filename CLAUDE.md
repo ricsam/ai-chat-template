@@ -6,6 +6,7 @@ The server is started on localhost:3232
 * typcheck: `bash -c 'cd /Users/richard.samuelsson/projects/build-it-now && bun run typecheck:template ai-chatbot'`
 * lint: `bash -c 'cd /Users/richard.samuelsson/projects/build-it-now && bun run lint:template ai-chatbot'`
 * generate frontend routes: `bash -c 'cd /Users/richard.samuelsson/projects/build-it-now && bun scripts/generate-routes.ts ai-chatbot'`
+* update migrations: `bash -c 'cd /Users/richard.samuelsson/projects/build-it-now && bun run scripts/generate-template-migrations.ts --delete-existing ai-chatbot'`
 
 
 **Playwright testing:**
@@ -38,6 +39,9 @@ EOF
 This is a virtual file system so there is no package json nor node_modules directory but the javascript and browser environment will just work.
 
 The icon library for this project is @tabler/icons-react
+
+To view the different shadcn and AI elements components you can browse here:
+`/Users/richard.samuelsson/projects/build-it-now/src/components` but don't modify these files, they are readonly
 
 ---
 
@@ -194,13 +198,17 @@ import { createClient } from "@richie-rpc/client";
 import { createTanstackQueryApi } from "@richie-rpc/react-query";
 import { QueryClient } from "@tanstack/react-query";
 import { contract } from "@/shared/contract";
+import env from "@/env";
 
-export const client = createClient(contract, { baseUrl: "/api" });
+// REST client - uses relative path for API calls
+export const client = createClient(contract, {
+  baseUrl: env.BASE_URL + "/api",
+});
 export const api = createTanstackQueryApi(client, contract);
 export const queryClient = new QueryClient();
 ```
 
-#### Frontend Hooks (import { api, queryClient } from "@/api")
+#### Frontend Hooks (import { api, queryClient } from "./api")
 
 All hooks use a unified options object with `queryKey` and `queryData`.
 
@@ -497,7 +505,6 @@ const isValid = await password.verify("user-password", hash);
 The `@/env` module provides access to environment variables in both frontend and backend.
 
 **System-provided variables (always available):**
-- `API_BASE_URL` - Full URL for API calls (e.g., `${process.env.BASE_URL}/project-api/{projectId}/{sessionId}/{mode}/api`)
 - `BASE_URL` - Full URL where the app is served (e.g., `${process.env.BASE_URL}/preview/{projectId}/{sessionId}/{mode}`)
 
 **Usage:**
@@ -505,7 +512,7 @@ The `@/env` module provides access to environment variables in both frontend and
 // Frontend (api.ts or any frontend file)
 import env from "@/env";
 
-const client = createClient(contract, { baseUrl: env.API_BASE_URL });
+const client = createClient(contract, { baseUrl: env.BASE_URL + '/api' });
 console.log("App served at:", env.BASE_URL);
 
 // Backend (router.ts or any backend file)
@@ -604,7 +611,25 @@ for await (const chunk of stream.textStream) {
 // Access final result after streaming
 const finalResult = await stream;
 console.log(finalResult.usage); // { promptTokens, completionTokens }
+
+// Text Embeddings (1536 dimensions via OpenAI text-embedding-ada-002)
+import { embed, embedMany } from "ai";
+
+// Single embedding
+const { embedding } = await embed({
+  model: buildItNow.textEmbeddingModel(),
+  value: "Your text to embed",
+});
+console.log(embedding.length); // Always 1536 dimensions
+
+// Multiple embeddings
+const { embeddings } = await embedMany({
+  model: buildItNow.textEmbeddingModel(),
+  values: ["First text", "Second text", "Third text"],
+});
 ```
+
+**Note:** Embeddings use OpenAI's text-embedding-ada-002 model which always outputs 1536-dimensional vectors. No modelId parameter is needed since only one embedding model is supported.
 
 **When to use AI SDK vs @/claude:**
 - Use `@/claude` for simple single-turn conversations
@@ -612,6 +637,44 @@ console.log(finalResult.usage); // { promptTokens, completionTokens }
   - Streaming responses
   - AI SDK features (structured output, tools, etc.)
   - Compatibility with AI SDK patterns
+
+#### Document Conversion & Chunking (@/docling)
+
+Convert PDF, DOCX, and other files to embedding-ready chunks:
+
+```typescript
+import { docling } from "@/docling";
+import { embedMany } from "ai";
+import { buildItNow } from "@/ai-sdk-provider";
+
+// Convert files to chunks
+const result = await docling(pdfFile, docxFile);
+
+// Chunks are ready for embedding
+const { embeddings } = await embedMany({
+  model: buildItNow.textEmbeddingModel(),
+  values: result.chunks.map(c => c.text),
+});
+
+// Store chunks with embeddings
+const vectorData = result.chunks.map((chunk, i) => ({
+  content: chunk.text,          // Text with heading context (use for embeddings)
+  embedding: embeddings[i],
+  filename: chunk.filename,
+  headings: chunk.headings,     // Section headings
+  pageNumbers: chunk.pageNumbers,
+}));
+
+// Access raw document content if needed
+const markdown = result.documents[0]?.markdown;
+```
+
+**Result structure:**
+- `chunks` - Pre-chunked content optimized for RAG (use `chunk.text` for embeddings)
+- `documents` - Source documents with `markdown`, `html`, `text`, `status`, `errors`
+- `processingTime` - Total processing time in seconds
+
+**Supported formats:** PDF, DOCX, images, and other document formats supported by Docling.
 
 #### Database Migrations (@/migrations)
 ```typescript

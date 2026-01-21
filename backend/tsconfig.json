@@ -19,6 +19,7 @@
     "noImplicitOverride": true,
     "paths": {
       "@/ai-sdk-provider": ["../../../ai-sdk-provider.ts"],
+      "@/docling": ["../../../template-docling.ts"],
       "@/env": ["../backend-env.ts"],
       "@/db": ["../../../db.ts"],
       "@/shared/*": ["../shared/*"]

@@ -2,8 +2,9 @@ import { createAuthClient } from "better-auth/react";
 import { credentialsClient } from "./credentials-client";
 import env from "@/env";
 
+// Auth client - uses relative path for API calls
 export const authClient = createAuthClient({
-  baseURL: env.API_BASE_URL + "/auth",
+  baseURL: env.BASE_URL + "/api/auth",
   plugins: [credentialsClient()],
 });
 

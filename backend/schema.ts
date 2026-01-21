@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, index, vector } from "drizzle-orm/pg-core";
 
 // User table (managed by Better Auth with credentials plugin)
 export const userTable = pgTable("user", {
@@ -54,4 +54,28 @@ export const verificationTable = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
+});
+
+// Documents table - stores uploaded files and metadata for knowledge base
+export const documentsTable = pgTable("documents", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => userTable.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  markdownContent: text("markdown_content"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'indexed' | 'failed'
+  error: text("error"), // Error message if failed
+  chunksCount: integer("chunks_count"), // Number of chunks created after indexing
+  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
+});
+
+// Embeddings table - stores chunks with pgvector for semantic search
+export const embeddingsTable = pgTable("embeddings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  documentId: text("document_id").notNull().references(() => documentsTable.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  blockType: text("block_type"),
+  pageNumber: integer("page_number"),
+  embedding: vector("embedding", { dimensions: 1536 }).notNull(),
 });
