@@ -310,7 +310,7 @@ function KnowledgeBasePage() {
 
   // Upload files function (supports multiple files)
   const uploadFiles = useCallback(
-    async (fileList: FileList | File[]) => {
+    async (fileList: FileList) => {
       setIsUploading(true);
       setUploadError(null);
 
