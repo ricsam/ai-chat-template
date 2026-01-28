@@ -250,13 +250,13 @@ const result = await api.listUsers.query({ query: { limit: "10" } });
 
 ---
 
-### Drizzle ORM - SQLite
+### Drizzle ORM - Postgres
 
 #### Schema Definition (backend/schema.ts)
 ```typescript
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const usersTable = sqliteTable("users", {
+export const usersTable = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   email: text("email"),
