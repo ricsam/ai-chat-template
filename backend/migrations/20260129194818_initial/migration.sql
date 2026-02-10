@@ -1,5 +1,5 @@
 -- Migration: initial
--- Generated: 2026-01-20T10:30:23.666Z
+-- Generated: 2026-01-29T19:48:18.503Z
 
 --> statement-breakpoint
 CREATE TABLE "account" (

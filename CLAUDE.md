@@ -304,7 +304,7 @@ await db.delete(usersTable).where(eq(usersTable.id, "123"));
 
 ### Backend Runtime Environment
 
-**IMPORTANT:** The backend runs in a sandboxed QuickJS environment, NOT Node.js or a browser. It has a LIMITED set of web-standard APIs. Do not assume Node.js APIs (like `fs`, `path`, `http`) or browser-only APIs exist.
+**IMPORTANT:** The backend runs in a sandboxed environment, NOT Node.js or a browser. It has a LIMITED set of web-standard APIs. Do not assume Node.js APIs (like `fs`, `path`, `http`) or browser-only APIs exist.
 
 #### Available Global APIs
 
@@ -350,8 +350,6 @@ const formData = new FormData();
 formData.append("name", "John");
 formData.append("file", new File(["content"], "file.txt"));
 ```
-
-**Security:** fetch() blocks requests to localhost and internal IPs.
 
 #### HTTP Server (serve)
 ```typescript
@@ -522,22 +520,19 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 ```
 
 **User-defined variables:**
-For secrets and configuration that shouldn't be hardcoded (API keys, tokens, etc.), define them using the `update_env_schema` tool:
+For secrets and configuration that shouldn't be hardcoded (API keys, tokens, etc.), declare them using the `declare_env` tool:
 ```json
 {
-  "schema": {
-    "backend": {
-      "STRIPE_SECRET_KEY": { "optional": false },
-      "DEBUG_MODE": { "optional": true }
-    },
-    "frontend": {
-      "STRIPE_PUBLISHABLE_KEY": { "optional": false }
-    }
-  }
+  "envs": [
+    "backend/STRIPE_SECRET_KEY",
+    "backend/DEBUG_MODE?",
+    "frontend/STRIPE_PUBLISHABLE_KEY"
+  ]
 }
 ```
+Format: `target/NAME` with optional suffix `?` (optional) or `!` (required, default). Calls are additive — they merge into the existing schema without removing anything. To remove vars, use the `remove_env` tool.
 
-The user sets values in the Settings panel (you cannot set values, only define the schema).
+The user sets values in the Settings panel (you cannot set values, only declare the schema).
 
 **Important notes:**
 - Backend env vars are server-side only (secrets, API keys)
@@ -981,24 +976,22 @@ Then use: `<div className="bg-warning text-warning-foreground" />`
 In dev mode, all user file exports are available for debugging:
 ```javascript
 // Access any exported component/function by file path
-window.__builditnow.exports['frontend/app.tsx'].App
-window.__builditnow.exports['frontend/api.ts'].client
-window.__builditnow.exports['frontend/api.ts'].queryClient
-window.__builditnow.exports['frontend/api.ts'].api
+window.__builditnow.exports['app.tsx'].App
+window.__builditnow.exports['api.ts'].client
+window.__builditnow.exports['api.ts'].queryClient
+window.__builditnow.exports['api.ts'].api
 ```
 
 **Common debugging patterns:**
 ```javascript
 // Invalidate queries to refresh data
-const queryClient = window.__builditnow.exports['frontend/api.ts'].queryClient;
+const queryClient = window.__builditnow.exports['api.ts'].queryClient;
 queryClient.invalidateQueries({ queryKey: ['getUsers'] });
 
 // Make direct API call
-const client = window.__builditnow.exports['frontend/api.ts'].client;
+const client = window.__builditnow.exports['api.ts'].client;
 const result = await client.getUsers({});
 console.log(result);
 ```
-
-
 
 

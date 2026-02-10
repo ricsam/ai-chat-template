@@ -4,7 +4,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { queryClient } from "./api";
 import { router } from "./router";
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "./ui/theme-provider";
 import "./styles.css";
 
 // Error Boundary component

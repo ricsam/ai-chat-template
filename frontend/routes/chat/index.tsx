@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChatLayout } from "../../components/chat-layout";
+import { ChatLayout } from "../../ui/chat-layout";
 
 export const Route = createFileRoute("/chat/")({
   component: ChatIndex,

@@ -1,18 +1,14 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { createAuthEndpoint, APIError } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import db from "@/db";
+import { userTable, accountTable } from "./schema";
 
 const inputSchema = z.object({
   username: z.string().min(1),
 });
-
-interface User {
-  id: string;
-  username: string;
-  name: string;
-  email: string;
-}
 
 export function credentialsPlugin(): BetterAuthPlugin {
   return {
@@ -24,59 +20,57 @@ export function credentialsPlugin(): BetterAuthPlugin {
           method: "POST",
           body: inputSchema,
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        async (ctx: any): Promise<Response> => {
+        async (ctx) => {
           const { username } = ctx.body;
-
-          // Get the adapter to interact with the database
-          const { adapter, internalAdapter } = ctx.context;
+          const { internalAdapter } = ctx.context;
 
           // Try to find existing user by username
-          let user = (await adapter.findOne({
-            model: "user",
-            where: [{ field: "username", value: username }],
-          })) as User | null;
+          let user = await db
+            .select()
+            .from(userTable)
+            .where(eq(userTable.username, username))
+            .then((rows) => rows[0] ?? null);
 
-          // If user doesn't exist, create a new one
+          // If user doesn't exist, create user + account in a transaction
           if (!user) {
             const userId = crypto.randomUUID();
             const now = new Date();
 
-            user = (await adapter.create({
-              model: "user",
-              data: {
-                id: userId,
-                username: username,
-                name: username,
-                email: `${username}@local.chat`,
-                emailVerified: false,
-                createdAt: now,
-                updatedAt: now,
-              },
-            })) as User | null;
+            user = await db.transaction(async (tx) => {
+              const [newUser] = await tx
+                .insert(userTable)
+                .values({
+                  id: userId,
+                  username: username,
+                  name: username,
+                  email: `${username}@local.chat`,
+                  emailVerified: false,
+                  createdAt: now,
+                  updatedAt: now,
+                })
+                .returning();
 
-            if (!user) {
-              throw new APIError("INTERNAL_SERVER_ERROR", {
-                message: "Failed to create user",
-              });
-            }
+              if (!newUser) {
+                throw new APIError("INTERNAL_SERVER_ERROR", {
+                  message: "Failed to create user",
+                });
+              }
 
-            // Create an account for the user (credential type)
-            await adapter.create({
-              model: "account",
-              data: {
+              await tx.insert(accountTable).values({
                 id: crypto.randomUUID(),
-                userId: user.id,
-                accountId: user.id,
+                userId: newUser.id,
+                accountId: newUser.id,
                 providerId: "credentials",
                 createdAt: now,
                 updatedAt: now,
-              },
+              });
+
+              return newUser;
             });
           }
 
           // Create session using internal adapter
-          const session = await internalAdapter.createSession(user.id, ctx.request);
+          const session = await internalAdapter.createSession(user.id);
 
           if (!session) {
             throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -91,7 +85,7 @@ export function credentialsPlugin(): BetterAuthPlugin {
             user,
             session,
           });
-        }
+        },
       ),
     },
     schema: {

@@ -63,8 +63,8 @@ import type { FileUIPart } from "ai";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, queryClient } from "../../api";
-import { ChatLayout } from "../../components/chat-layout";
-import { CitationMarkdownRenderer } from "../../components/citation-pill";
+import { ChatLayout } from "../../ui/chat-layout";
+import { CitationMarkdownRenderer } from "../../ui/citation-pill";
 
 // Skeleton component for loading state
 function Skeleton({ className }: { className?: string }) {
