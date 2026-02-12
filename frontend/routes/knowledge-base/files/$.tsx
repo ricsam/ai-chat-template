@@ -149,13 +149,9 @@ function FileDetailsPage() {
     queryData: { params: { id: docId ?? "" } },
     enabled: !!session && !!docId,
     refetchInterval: (query) => {
-      // Access the data from the query state
-      const response = query.state.data;
-      if (response?.status === 200) {
-        const docData = response.data;
-        if (docData.status === "pending" || docData.status === "processing") {
-          return 2000; // Poll every 2s while processing
-        }
+      const docData = query.state.data?.payload;
+      if (docData && (docData.status === "pending" || docData.status === "processing")) {
+        return 2000; // Poll every 2s while processing
       }
       return false;
     },
@@ -165,14 +161,13 @@ function FileDetailsPage() {
   const { data: chunksData, isLoading: chunksLoading } = api.getDocumentChunks.useQuery({
     queryKey: ["getDocumentChunks", docId ?? ""],
     queryData: { params: { id: docId ?? "" } },
-    enabled: !!session && !!docId && data?.status === 200 && data.data.status === "indexed",
+    enabled: !!session && !!docId && data?.payload.status === "indexed",
   });
 
   const deleteDocument = api.deleteDocument.useMutation();
 
-  // Extract document from response - check for success status
-  const doc: Document | null = data?.status === 200 ? data.data : null;
-  const chunks: Chunk[] = chunksData?.status === 200 ? chunksData.data : [];
+  const doc: Document | null = data?.payload ?? null;
+  const chunks: Chunk[] = chunksData?.payload ?? [];
 
   // Handle delete
   const handleDelete = async () => {

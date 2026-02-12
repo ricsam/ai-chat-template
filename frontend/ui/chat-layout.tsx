@@ -52,8 +52,8 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
   const createConversation = api.createConversation.useMutation();
   const deleteConversation = api.deleteConversation.useMutation();
 
-  const conversations = conversationsData?.data ?? [];
-  const models = modelsData?.data ?? [];
+  const conversations = conversationsData?.payload ?? [];
+  const models = modelsData?.payload ?? [];
 
   // Use first available model as default for new chats
   const defaultModel = models[0]?.modelId ?? "claude-sonnet-4-5-20250929";
@@ -63,8 +63,8 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
       body: { modelId: defaultModel },
     });
     await refetch();
-    if (result.data && "id" in result.data) {
-      navigate({ to: "/chat/$id", params: { id: result.data.id } });
+    if (result.payload && "id" in result.payload) {
+      navigate({ to: "/chat/$id", params: { id: result.payload.id } });
     }
   };
 

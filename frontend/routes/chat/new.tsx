@@ -18,13 +18,13 @@ function NewChat() {
   useEffect(() => {
     // Create a new chat with the first available model and redirect
     // Use ref to prevent double creation in React StrictMode
-    if (!modelsLoading && modelsData?.data && !hasCreated.current) {
+    if (!modelsLoading && modelsData?.payload && !hasCreated.current) {
       hasCreated.current = true;
-      const models = modelsData.data;
+      const models = modelsData.payload;
       const defaultModel = models[0]?.modelId ?? "claude-sonnet-4-5-20250929";
       createConversation.mutateAsync({ body: { modelId: defaultModel } }).then((result) => {
-        if (result.data && "id" in result.data) {
-          navigate({ to: "/chat/$id", params: { id: result.data.id } });
+        if (result.payload && "id" in result.payload) {
+          navigate({ to: "/chat/$id", params: { id: result.payload.id } });
         }
       });
     }

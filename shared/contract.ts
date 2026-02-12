@@ -56,6 +56,8 @@ export const contract = defineContract({
         conversation: ConversationSchema,
         messages: z.array(z.any()), // UIMessage[] - complex type
       }),
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },
@@ -86,6 +88,8 @@ export const contract = defineContract({
     }),
     responses: {
       [Status.OK]: ConversationSchema,
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },
@@ -98,6 +102,8 @@ export const contract = defineContract({
     params: z.object({ id: z.string() }),
     responses: {
       [Status.OK]: z.object({ success: z.boolean() }),
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },
@@ -120,6 +126,8 @@ export const contract = defineContract({
     params: z.object({ id: z.string() }),
     responses: {
       [Status.OK]: z.object({ success: z.boolean() }),
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },
@@ -142,6 +150,8 @@ export const contract = defineContract({
         error: z.string().nullable(),
         chunksCount: z.number().nullable(),
       }),
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },
@@ -159,6 +169,8 @@ export const contract = defineContract({
         blockType: z.string().nullable(),
         pageNumber: z.number().nullable(),
       })),
+    },
+    errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
     },
   },

@@ -189,7 +189,7 @@ function KnowledgeBasePage() {
     enabled: !!session,
     refetchInterval: (query) => {
       // Poll every 2s if any documents are processing
-      const docs = query.state.data?.data ?? [];
+      const docs = query.state.data?.payload ?? [];
       const hasProcessing = docs.some((d: { status: string }) => d.status === "pending" || d.status === "processing");
       return hasProcessing ? 2000 : false;
     },
@@ -197,7 +197,7 @@ function KnowledgeBasePage() {
 
   const deleteDocument = api.deleteDocument.useMutation();
 
-  const documents = useMemo(() => documentsData?.data ?? [], [documentsData?.data]);
+  const documents = useMemo(() => documentsData?.payload ?? [], [documentsData?.payload]);
 
   // Extract folders and filter items to current folder
   const { folders, files } = useMemo(() => {

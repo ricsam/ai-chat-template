@@ -107,7 +107,7 @@ function ChatView() {
     queryData: {},
   });
 
-  const models = modelsData.data;
+  const models = modelsData.payload;
   if (models.length === 0) {
     throw new Error("No models available. At least one model is required.");
   }
@@ -143,7 +143,7 @@ function ChatView() {
     queryData: { params: { id } },
   });
 
-  const conversation = convoData?.data && "conversation" in convoData.data ? convoData.data : null;
+  const conversation = convoData?.payload ?? null;
 
   // Reset thinking mode when model changes (if model doesn't support thinking)
   useEffect(() => {
