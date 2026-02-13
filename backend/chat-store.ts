@@ -101,7 +101,7 @@ export async function saveChat({
   convo.updatedAt = now;
 
   // Auto-generate title from first user message if it's "New Chat"
-  if (convo.title === "New Chat" && convo.messages.length > 0) {
+  if (!convo.title || convo.title === "New Chat" && convo.messages.length > 0) {
     const firstUserMessage = convo.messages.find(
       (m) => typeof m === "object" && m !== null && "role" in m && m.role === "user"
     ) as { role: string; parts?: Array<{ type: string; text?: string }> } | undefined;
