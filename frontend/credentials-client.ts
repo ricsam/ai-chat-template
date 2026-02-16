@@ -6,7 +6,12 @@ interface FetchOptions {
   [key: string]: unknown;
 }
 
-type BetterAuthFetch = (url: string, options?: FetchOptions) => Promise<unknown>;
+interface BetterAuthFetchResult {
+  data: unknown;
+  error: { message: string; status?: number } | null;
+}
+
+type BetterAuthFetch = (url: string, options?: FetchOptions) => Promise<BetterAuthFetchResult>;
 
 export function credentialsClient() {
   return {
@@ -14,10 +19,7 @@ export function credentialsClient() {
     getActions: ($fetch: BetterAuthFetch) => {
       return {
         signIn: {
-          credentials: async (
-            data: { username: string },
-            fetchOptions?: FetchOptions
-          ) => {
+          credentials: async (data: { username: string }, fetchOptions?: FetchOptions) => {
             return $fetch("/sign-in/credentials", {
               method: "POST",
               body: data,
