@@ -541,20 +541,6 @@ The user sets values in the Settings panel (you cannot set values, only declare 
 - The schema is stored in `env-schema.json` (git-tracked)
 - Values are encrypted and stored separately (not git-tracked)
 
-#### Claude AI (@/claude)
-```typescript
-import { claude } from "@/claude";
-
-const result = await claude.message({
-  messages: [{ role: "user", content: "Hello!" }],
-  maxTokens: 100,
-  system: "You are a helpful assistant."  // optional
-});
-
-console.log(result.content);  // AI response text
-console.log(result.usage);    // { input_tokens, output_tokens }
-```
-
 #### AI SDK Provider (@/ai-sdk-provider)
 
 For more advanced AI use cases, use the Vercel AI SDK with the built-in provider:
@@ -626,12 +612,10 @@ const { embeddings } = await embedMany({
 
 **Note:** Embeddings use OpenAI's text-embedding-ada-002 model which always outputs 1536-dimensional vectors. No modelId parameter is needed since only one embedding model is supported.
 
-**When to use AI SDK vs @/claude:**
-- Use `@/claude` for simple single-turn conversations
-- Use `@/ai-sdk-provider` when you need:
-  - Streaming responses
-  - AI SDK features (structured output, tools, etc.)
-  - Compatibility with AI SDK patterns
+**Use `@/ai-sdk-provider` for all model access in user apps:**
+- Streaming responses
+- AI SDK features (structured output, tools, etc.)
+- Compatibility with AI SDK patterns
 
 #### Document Conversion & Chunking (@/docling)
 
@@ -993,5 +977,4 @@ const client = window.__builditnow.exports['api.ts'].client;
 const result = await client.getUsers({});
 console.log(result);
 ```
-
 
