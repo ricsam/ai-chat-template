@@ -1,6 +1,6 @@
 // Completion - Streaming completion endpoint for useCompletion hook
 import { streamText } from "ai";
-import { buildItNow } from "@/ai-sdk-provider";
+import { buildItNow, getModels } from "@/ai-sdk-provider";
 import { authenticateRequest } from "./auth";
 
 // POST /chat/completion - Streaming completion endpoint for useCompletion hook
@@ -21,8 +21,22 @@ export async function handleCompletion(request: Request): Promise<Response> {
     return new Response("Prompt is required", { status: 400 });
   }
 
-  // Use provided model or default
-  const model = modelId || "claude-sonnet-4-5-20250929";
+  const models = await getModels();
+  if (models.length === 0) {
+    return new Response(
+      "No models are configured. Set AI_SDK_MODELS in your .env file.",
+      { status: 503 },
+    );
+  }
+
+  if (modelId && !models.some((model) => model.modelId === modelId)) {
+    return new Response(
+      `Model "${modelId}" is not configured. Add it to AI_SDK_MODELS in your .env file.`,
+      { status: 400 },
+    );
+  }
+
+  const model = modelId ?? models[0]!.modelId;
 
   // Stream AI response
   const result = streamText({

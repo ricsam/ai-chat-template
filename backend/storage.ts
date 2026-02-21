@@ -1,5 +1,5 @@
 // File Storage Helpers using OPFS (Origin Private File System)
-// `fs` is a global provided by the QuickJS runtime
+// `fs` is a global provided by the isolate runtime
 
 // Helper to get or create a directory recursively
 async function getOrCreateDir(

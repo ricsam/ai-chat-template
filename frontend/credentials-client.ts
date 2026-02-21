@@ -1,17 +1,17 @@
 import type { BetterAuthClientPlugin } from "better-auth/client";
 
-interface FetchOptions {
+export interface FetchOptions {
   method?: string;
   body?: unknown;
   [key: string]: unknown;
 }
 
-interface BetterAuthFetchResult {
+export interface BetterAuthFetchResult {
   data: unknown;
   error: { message: string; status?: number } | null;
 }
 
-type BetterAuthFetch = (url: string, options?: FetchOptions) => Promise<BetterAuthFetchResult>;
+export type BetterAuthFetch = (url: string, options?: FetchOptions) => Promise<BetterAuthFetchResult>;
 
 export function credentialsClient() {
   return {

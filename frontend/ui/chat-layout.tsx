@@ -56,9 +56,13 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
   const models = modelsData?.payload ?? [];
 
   // Use first available model as default for new chats
-  const defaultModel = models[0]?.modelId ?? "claude-sonnet-4-5-20250929";
+  const defaultModel = models[0]?.modelId;
 
   const handleNewChat = async () => {
+    if (!defaultModel) {
+      return;
+    }
+
     const result = await createConversation.mutateAsync({
       body: { modelId: defaultModel },
     });
@@ -118,7 +122,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
         <div className="p-4 border-b border-border space-y-2">
           <Button
             onClick={handleNewChat}
-            disabled={createConversation.isPending}
+            disabled={createConversation.isPending || !defaultModel}
             className="w-full"
           >
             <svg
