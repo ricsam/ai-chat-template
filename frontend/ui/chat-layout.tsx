@@ -166,7 +166,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
                 }`}
               >
                 <svg
-                  className="w-4 h-4 flex-shrink-0 text-muted-foreground"
+                  className="w-4 h-4 shrink-0 text-muted-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
