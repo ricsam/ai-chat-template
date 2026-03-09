@@ -29,18 +29,22 @@ export const router = createRouter<typeof contract, RouterContext>(
       const mappedModels = models.map((model) => {
         // Infer provider from model ID
         let provider = "anthropic";
-        if (model.modelId.startsWith("gpt-") || model.modelId.startsWith("o1-") || model.modelId.startsWith("o3-")) {
+        const executableModelId = model.executableModelId.toLowerCase();
+        if (executableModelId.startsWith("gpt-") || executableModelId.startsWith("o1-") || executableModelId.startsWith("o3-")) {
           provider = "openai";
-        } else if (model.modelId.startsWith("gemini-")) {
+        } else if (executableModelId.startsWith("gemini-")) {
           provider = "google";
-        } else if (model.modelId.startsWith("deepseek-")) {
+        } else if (executableModelId.startsWith("deepseek-")) {
           provider = "deepseek";
         }
+
+        const providerOptions = model.providerOptions as { thinking?: unknown } | undefined;
+        const thinking = provider === "anthropic" && providerOptions?.thinking !== undefined && providerOptions.thinking !== false;
 
         return {
           modelId: model.modelId,
           displayName: model.displayName,
-          thinking: model.thinking,
+          thinking,
           provider,
           maxTokens: model.contextWindow,
         };

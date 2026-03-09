@@ -8,7 +8,7 @@ import {
   createIdGenerator,
   type UIMessage,
 } from "ai";
-import { buildItNow } from "@/ai-sdk-provider";
+import { buildItNow, getModels } from "@/ai-sdk-provider";
 import { findRelevantContent, type SearchResult } from "./embedding";
 import type { Citation } from "@/shared/types";
 
@@ -36,7 +36,15 @@ export async function handleChatStream(request: Request): Promise<Response> {
     }
 
     // Use per-message model if provided, otherwise fall back to conversation default
-    const selectedModel = modelId || convo.modelId;
+    const requestedModel = modelId ?? convo.modelId;
+    const availableModels = await getModels();
+    if (availableModels.length === 0) {
+      return new Response(
+        "No models are configured. Set AI_SDK_MODELS in your .env file.",
+        { status: 503 },
+      );
+    }
+    const selectedModel = availableModels.find((model) => model.modelId === requestedModel)?.modelId ?? availableModels[0]!.modelId;
 
     // Load previous messages
     const previousMessages = (await loadChat(chatId)) as UIMessage[];

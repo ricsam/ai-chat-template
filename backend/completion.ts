@@ -29,14 +29,17 @@ export async function handleCompletion(request: Request): Promise<Response> {
     );
   }
 
-  if (modelId && !models.some((model) => model.modelId === modelId)) {
-    return new Response(
-      `Model "${modelId}" is not configured. Add it to AI_SDK_MODELS in your .env file.`,
-      { status: 400 },
-    );
+  let model = models[0]!.modelId;
+  if (modelId) {
+    const matchedModel = models.find((availableModel) => availableModel.modelId === modelId);
+    if (!matchedModel) {
+      return new Response(
+        `Model "${modelId}" is not configured. Add it to AI_SDK_MODELS in your .env file.`,
+        { status: 400 },
+      );
+    }
+    model = matchedModel.modelId;
   }
-
-  const model = modelId ?? models[0]!.modelId;
 
   // Stream AI response
   const result = streamText({
