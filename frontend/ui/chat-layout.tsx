@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "@tanstack/react-router";
 import { api } from "../api";
-import { useSession, signOut } from "../auth-client";
+import { signOut, useAuthSession } from "../auth-client";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -27,27 +27,27 @@ interface ChatLayoutProps {
 }
 
 export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
-  const { data: session, isPending } = useSession();
+  const { session, status, isInitialLoad } = useAuthSession();
   const navigate = useNavigate();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isPending && !session) {
+    if (status === "anonymous") {
       navigate({ to: "/" });
     }
-  }, [isPending, session, navigate]);
+  }, [navigate, status]);
 
   // Fetch conversations and models
   const { data: conversationsData, refetch } = api.listConversations.useQuery({
     queryKey: ["listConversations"],
     queryData: {},
-    enabled: !!session,
+    enabled: status === "authenticated",
   });
   const { data: modelsData } = api.getModels.useQuery({
     queryKey: ["getModels"],
     queryData: {},
-    enabled: !!session,
+    enabled: status === "authenticated",
   });
   const createConversation = api.createConversation.useMutation();
   const deleteConversation = api.deleteConversation.useMutation();
@@ -88,7 +88,7 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
     navigate({ to: "/" });
   };
 
-  if (isPending || !session) {
+  if (isInitialLoad) {
     return (
       <div className="h-screen flex bg-background">
         {/* Sidebar Skeleton */}
@@ -112,6 +112,10 @@ export function ChatLayout({ children, currentChatId }: ChatLayoutProps) {
         </div>
       </div>
     );
+  }
+
+  if (status !== "authenticated" || !session) {
+    return null;
   }
 
   return (

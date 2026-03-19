@@ -5,12 +5,9 @@ import * as schema from "./schema";
 import env from "@/env";
 import { credentialsPlugin } from "./credentials-plugin";
 
-const url = new URL(env.BASE_URL);
-url.pathname = "/api/auth";
-
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET || "development-secret-change-in-production",
-  baseURL: url.toString(),
+  baseURL: env.BASE_URL + "/api/auth",
 
   database: drizzleAdapter(db, {
     provider: "pg",

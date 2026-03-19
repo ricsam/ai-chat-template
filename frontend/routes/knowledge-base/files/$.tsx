@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { api, queryClient } from "../../../api";
-import { useSession } from "../../../auth-client";
+import { useAuthSession } from "../../../auth-client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -139,7 +139,7 @@ function ChunkCard({ chunk, index, total }: { chunk: Chunk; index: number; total
 function FileDetailsPage() {
   const { _splat: docId } = Route.useParams();
   const navigate = useNavigate();
-  const { data: session, isPending: sessionPending } = useSession();
+  const { session, status, isInitialLoad } = useAuthSession();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -147,7 +147,7 @@ function FileDetailsPage() {
   const { data, isLoading, error } = api.getDocument.useQuery({
     queryKey: ["getDocument", docId ?? ""],
     queryData: { params: { id: docId ?? "" } },
-    enabled: !!session && !!docId,
+    enabled: status === "authenticated" && !!docId,
     refetchInterval: (query) => {
       const docData = query.state.data?.payload;
       if (docData && (docData.status === "pending" || docData.status === "processing")) {
@@ -161,7 +161,7 @@ function FileDetailsPage() {
   const { data: chunksData, isLoading: chunksLoading } = api.getDocumentChunks.useQuery({
     queryKey: ["getDocumentChunks", docId ?? ""],
     queryData: { params: { id: docId ?? "" } },
-    enabled: !!session && !!docId && data?.payload.status === "indexed",
+    enabled: status === "authenticated" && !!docId && data?.payload.status === "indexed",
   });
 
   const deleteDocument = api.deleteDocument.useMutation();
@@ -200,7 +200,7 @@ function FileDetailsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (sessionPending || isLoading) {
+  if (isInitialLoad || isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <IconLoader2 size={32} className="animate-spin text-muted-foreground" />

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { api, queryClient } from "../../api";
-import { useSession } from "../../auth-client";
+import { useAuthSession } from "../../auth-client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -162,7 +162,7 @@ type SortField = "fileName" | "fileSize" | "createdAt" | "status";
 type SortDirection = "asc" | "desc";
 
 function KnowledgeBasePage() {
-  const { data: session, isPending: sessionPending } = useSession();
+  const { session, status, isInitialLoad } = useAuthSession();
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -186,7 +186,7 @@ function KnowledgeBasePage() {
   } = api.listDocuments.useQuery({
     queryKey: ["listDocuments"],
     queryData: {},
-    enabled: !!session,
+    enabled: status === "authenticated",
     refetchInterval: (query) => {
       // Poll every 2s if any documents are processing
       const docs = query.state.data?.payload ?? [];
@@ -441,7 +441,7 @@ function KnowledgeBasePage() {
     setCurrentFolder(parts.join("/"));
   };
 
-  if (sessionPending) {
+  if (isInitialLoad) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <IconLoader2 size={32} className="animate-spin text-muted-foreground" />

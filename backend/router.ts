@@ -1,6 +1,7 @@
 // RPC Router - Implements the contract with file-based storage
 import { createRouter, Status } from "@richie-rpc/server";
 import { contract } from "@/shared/contract";
+import env from "@/env";
 import { getModels } from "@/ai-sdk-provider";
 import {
   createChat,
@@ -14,6 +15,9 @@ import { authenticateRequest } from "./auth";
 import db from "@/db";
 import { documentsTable, embeddingsTable } from "./schema";
 import { eq, and, desc } from "drizzle-orm";
+
+const baseUrl = new URL(env.BASE_URL);
+const basePathname = baseUrl.pathname === "/" ? "" : baseUrl.pathname;
 
 interface RouterContext {
   getUserId: () => string;
@@ -270,9 +274,7 @@ export const router = createRouter<typeof contract, RouterContext>(
     },
   },
   {
-    // Note: The serve script strips the /api prefix before sending to backend
-    // So paths arrive as /conversations, /models, etc. - no basePath needed
-    basePath: "/api/router",
+    basePath: basePathname + "/api/router",
     async context(request) {
       const auth = await authenticateRequest(request);
       if (!auth) {
