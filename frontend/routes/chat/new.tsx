@@ -13,8 +13,8 @@ function NewChat() {
     queryKey: ["getModels"],
     queryData: {},
   });
-  const models = modelsData?.payload ?? [];
-  const hasModels = models.length > 0;
+  const defaultModelId = modelsData?.payload?.[0]?.modelId;
+  const hasModels = defaultModelId !== undefined;
   const hasCreated = useRef(false);
 
   useEffect(() => {
@@ -22,14 +22,13 @@ function NewChat() {
     // Use ref to prevent double creation in React StrictMode
     if (!modelsLoading && hasModels && !hasCreated.current) {
       hasCreated.current = true;
-      const defaultModel = models[0]!.modelId;
-      createConversation.mutateAsync({ body: { modelId: defaultModel } }).then((result) => {
+      createConversation.mutateAsync({ body: { modelId: defaultModelId } }).then((result) => {
         if (result.payload && "id" in result.payload) {
           navigate({ to: "/chat/$id", params: { id: result.payload.id } });
         }
       });
     }
-  }, [hasModels, models, modelsLoading, createConversation, navigate]);
+  }, [createConversation, defaultModelId, hasModels, modelsLoading, navigate]);
 
   if (!modelsLoading && !hasModels) {
     return (
