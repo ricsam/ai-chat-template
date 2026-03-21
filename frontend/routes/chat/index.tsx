@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@richie-router/react";
 import { ChatLayout } from "../../ui/chat-layout";
 
 export const Route = createFileRoute("/chat/")({

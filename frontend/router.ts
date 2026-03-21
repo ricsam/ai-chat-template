@@ -1,17 +1,19 @@
 import { routeTree } from "@/route-tree";
 import env from "@/env";
-import { createRouter, createBrowserHistory } from "@tanstack/react-router";
+import { createBrowserHistory, createRouter } from "@richie-router/react";
+
+const baseUrl = new URL(env.BASE_URL);
+const basePath = baseUrl.pathname === "/" ? "" : baseUrl.pathname.replace(/\/$/, "");
 
 export const history = createBrowserHistory();
-const baseUrl = new URL(env.BASE_URL);
 
 export const router = createRouter({
   routeTree,
-  basepath: baseUrl.pathname,
   history,
+  basePath,
 });
 
-declare module "@tanstack/react-router" {
+declare module "@richie-router/react" {
   interface Register {
     router: typeof router;
   }

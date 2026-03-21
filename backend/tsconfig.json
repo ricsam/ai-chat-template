@@ -22,6 +22,7 @@
       "@/docling": ["../../../template-docling.ts"],
       "@/env": ["../backend-env.ts"],
       "@/db": ["../../../db.ts"],
+      "@/route-manifest": ["../../runtime/route-manifest.gen.ts"],
       "@/shared/*": ["../shared/*"]
     }
   },
@@ -30,6 +31,8 @@
     "./**/*.tsx",
     "../../../ai-sdk-provider.ts",
     "../../../db.ts",
-    "../../../backend-types.d.ts", "../backend-env.ts",
+    "../../../backend-types.d.ts",
+    "../../runtime/route-manifest.gen.ts",
+    "../backend-env.ts"
   ]
 }

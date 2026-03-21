@@ -1,4 +1,4 @@
-import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { Outlet, createRootRoute } from "@richie-router/react";
 import { useAuthSession } from "../auth-client";
 
 export const Route = createRootRoute({

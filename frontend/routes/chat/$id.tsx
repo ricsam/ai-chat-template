@@ -58,7 +58,7 @@ import env from "@/env";
 import type { MessageMetadata } from "@/shared/types";
 import { useChat } from "@ai-sdk/react";
 import { IconBook, IconBrain, IconCheck, IconCopy, IconX } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@richie-router/react";
 import type { FileUIPart } from "ai";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";

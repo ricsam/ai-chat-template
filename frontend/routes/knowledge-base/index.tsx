@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@richie-router/react";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { api, queryClient } from "../../api";
 import { useAuthSession } from "../../auth-client";

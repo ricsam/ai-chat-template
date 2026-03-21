@@ -1,4 +1,4 @@
-import { useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate, Link } from "@richie-router/react";
 import { api } from "../api";
 import { signOut, useAuthSession } from "../auth-client";
 import { useEffect, useState, type ReactNode } from "react";

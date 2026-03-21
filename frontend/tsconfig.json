@@ -23,6 +23,7 @@
       "@/env": ["../frontend-env.ts"],
       "@/shared/*": ["../shared/*"],
       "@/route-tree": ["../../runtime/route-tree.gen.ts"],
+      "@/route-manifest": ["../../runtime/route-manifest.gen.ts"],
       "@/frontend/*": ["./*"],
       "@/components/*": ["../../../../src/components/*"],
       "@/lib/*": ["../../../../src/components/lib/*"],
@@ -35,6 +36,7 @@
     "../../../frontend-dev-tools.ts",
     "../../../frontend-modules.ts",
     "../../runtime/route-tree.gen.ts",
+    "../../runtime/route-manifest.gen.ts",
     "../frontend-env.ts"
   ]
 }

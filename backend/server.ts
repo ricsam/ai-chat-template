@@ -1,4 +1,6 @@
+import { handleHeadTagRequest } from "@richie-router/server";
 import { auth } from "./auth";
+import { headTags } from "./head-tags";
 import { router } from "./router";
 import { handleChatStream } from "./chat-stream";
 import { handleResumeStream } from "./chat-resume";
@@ -18,6 +20,14 @@ const chatStreamPathPattern = new RegExp(`^${escapedBasePathname}\\/api\\/chat\\
 serve({
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const headRequest = await handleHeadTagRequest(request, {
+      headTags,
+      basePath: baseUrl.pathname,
+    });
+
+    if (headRequest.matched) {
+      return headRequest.response;
+    }
 
     if (url.pathname === authPath || url.pathname.startsWith(authPath + "/")) {
       return auth.handler(request);

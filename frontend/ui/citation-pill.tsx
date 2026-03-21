@@ -9,7 +9,7 @@ import {
 } from "@/components/ai-elements/inline-citation";
 import { Badge } from "@/components/ui/badge";
 import { HoverCardTrigger } from "@/components/ui/hover-card";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@richie-router/react";
 import { useRef, useState, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 
@@ -35,7 +35,6 @@ function CitationTrigger({ citation }: { citation: Citation }) {
 
 // Citation component to render in portals
 function CitationPortalContent({ citation }: { citation: Citation }) {
-  const documentUrl = `/knowledge-base/files/${citation.documentId}`;
   return (
     <InlineCitation>
       <InlineCitationCard>
@@ -50,7 +49,8 @@ function CitationPortalContent({ citation }: { citation: Citation }) {
             }
           >
             <Link
-              to={documentUrl}
+              to="/knowledge-base/files/$"
+              params={{ _splat: citation.documentId }}
               className="text-xs text-primary hover:underline"
             >
               View document
