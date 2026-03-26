@@ -18,6 +18,10 @@ const DocumentSchema = z.object({
   status: z.enum(["pending", "processing", "indexed", "failed"]),
 });
 
+const authErrorSchema = z.object({
+  error: z.string(),
+});
+
 export const contract = defineContract({
   // Get available AI models
   getModels: {
@@ -43,6 +47,9 @@ export const contract = defineContract({
     responses: {
       [Status.OK]: z.array(ConversationSchema),
     },
+    errorResponses: {
+      [Status.Unauthorized]: authErrorSchema,
+    },
   },
 
   // Get single conversation with messages
@@ -59,6 +66,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -73,6 +81,9 @@ export const contract = defineContract({
     }),
     responses: {
       [Status.Created]: ConversationSchema,
+    },
+    errorResponses: {
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -91,6 +102,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -105,6 +117,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -115,6 +128,9 @@ export const contract = defineContract({
     path: "/knowledge-base/documents",
     responses: {
       [Status.OK]: z.array(DocumentSchema),
+    },
+    errorResponses: {
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -129,6 +145,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -153,6 +170,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 
@@ -172,6 +190,7 @@ export const contract = defineContract({
     },
     errorResponses: {
       [Status.NotFound]: z.object({ error: z.string() }),
+      [Status.Unauthorized]: authErrorSchema,
     },
   },
 });

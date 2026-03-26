@@ -1,7 +1,8 @@
 import { handleHeadTagRequest } from "@richie-router/server";
+import { RouteNotFoundError, ValidationError } from "@richie-rpc/server";
 import { auth } from "./auth";
 import { headTags } from "./head-tags";
-import { router } from "./router";
+import { router, UnauthorizedError } from "./router";
 import { handleChatStream } from "./chat-stream";
 import { handleResumeStream } from "./chat-resume";
 import { handleCompletion } from "./completion";
@@ -50,6 +51,28 @@ serve({
       return handleDocumentUpload(request);
     }
 
-    return router.handle(request);
+    try {
+      return await router.handle(request);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return Response.json(
+          {
+            error: "Validation Error",
+            field: error.field,
+            issues: error.zodError.issues,
+          },
+          { status: 400 },
+        );
+      }
+      if (error instanceof RouteNotFoundError) {
+        return Response.json({ error: "Not Found" }, { status: 404 });
+      }
+      if (error instanceof UnauthorizedError) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      console.error("Unhandled server error", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   },
 });

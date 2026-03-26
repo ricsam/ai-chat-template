@@ -280,7 +280,7 @@ export const router = createRouter<typeof contract, RouterContext>(
       if (!auth) {
         return {
           getUserId() {
-            throw new Error("Unauthorized");
+            throw new UnauthorizedError();
           },
         };
       }
@@ -292,3 +292,9 @@ export const router = createRouter<typeof contract, RouterContext>(
     },
   }
 );
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Unauthorized");
+  }
+}
