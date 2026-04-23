@@ -1,6 +1,6 @@
 {
   "backend": {
-    "BETTER_AUTH_SECRET": { "optional": true }
+    "BETTER_AUTH_SECRET": { "optional": true, "description": "Optional signing secret for Better Auth. Generate a strong random string locally." }
   },
   "frontend": {}
 }
